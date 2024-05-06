@@ -15,9 +15,9 @@ public class WarehousesRepository : IWarehousesRepository
         _configuration = configuration;
     }
 
-    public async Task<bool> DoesProductExist(int idProduct)
+    public async Task<double> DoesProductExist(int idProduct)
     {
-        var query = "SELECT 1 FROM PRODUCT WHERE IdProduct = @IdProduct";
+        var query = "SELECT price FROM PRODUCT WHERE IdProduct = @IdProduct";
         
         using SqlConnection connection = new SqlConnection(_configuration.GetConnectionString("Default"));
         using SqlCommand command = new SqlCommand();
@@ -30,7 +30,11 @@ public class WarehousesRepository : IWarehousesRepository
 
         var res = await command.ExecuteScalarAsync();
 
-        return res is not null;
+        if (res is null)
+        {
+            return -1;
+        }
+        return (double)res;
     }
 
     public async Task<bool> DoesWarehouseExist(int idWarehouse)
@@ -124,33 +128,5 @@ public class WarehousesRepository : IWarehousesRepository
 
         await command.ExecuteNonQueryAsync();
     }
-
-    public async Task<IActionResult> AddProductToWarehouse(int idProduct, int idWarehouse, int amount, DateTime createdAt)
-    {
-        if (!await DoesProductExist(idProduct))
-        {
-            return NotFound("Product doesn't exist");
-        }
-
-        if (!await DoesWarehouseExist(idWarehouse))
-        {
-            return NotFound("Warehouse doesn't exist");
-        }
-
-        if (amount <= 0)
-        {
-            return BadRequest("Amount can't be below zero");
-        }
-
-        int idOrder = await DoesOrderExist(idProduct, amount, createdAt);
-        if (idOrder == -1)
-        {
-            return NotFound("Order doesn't exist");
-        }
-
-        if (!await IsFulfilled(idOrder))
-        {
-            return BadRequest("Order is fulfilled");
-        }
-    }
+    
 }
